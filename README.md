@@ -67,14 +67,12 @@ echo "Notice: backup 13344 - started with name backup_13344.zip" | ch -w back
 
 The preset colors are optimized for readability on both light and dark terminals:
 
-1. Bright Red
-2. Bright Green
-3. Bright Yellow
-4. Bright Blue
-5. Bright Magenta
-6. Bright Cyan
-7. Orange
-8. Pink
+1. Red
+2. Green
+3. Orange
+4. Blue
+5. Pink
+6. Purple
 
 Colors cycle when you have more than 8 words without custom colors.
 
