@@ -35,10 +35,12 @@ Highlights specified words with colors from a preset palette.
 ### Custom colors
 
 ```bash
-ch <word1>::<HEXCOLOR> <word2>::<HEXCOLOR> <word3> ...
+ch <word1>::<HEXCOLOR> <word2>::<COLORNAME> <word3> ...
 ```
 
-Use custom hex colors (with or without `#` prefix). Words without specified colors use preset colors.
+Use custom hex colors (with or without `#` prefix) or named colors. Words without specified colors use preset colors.
+
+Available named colors: `red`, `green`, `orange`, `blue`, `pink`, `purple`
 
 ### Options
 
@@ -65,7 +67,7 @@ echo "Notice: backup 13344 - started with name backup_13344.zip" | ch -w back
 
 ### Color palette
 
-The preset colors are optimized for readability on both light and dark terminals:
+The preset colors use a pastel palette optimized for readability on both light and dark terminals:
 
 1. Red
 2. Green
@@ -74,7 +76,7 @@ The preset colors are optimized for readability on both light and dark terminals
 5. Pink
 6. Purple
 
-Colors cycle when you have more than 8 words without custom colors.
+Colors cycle when you have more than 6 words without custom colors.
 
 ## Examples
 
@@ -84,11 +86,11 @@ Colors cycle when you have more than 8 words without custom colors.
 # Tail a log file with highlighted keywords
 tail -f app.log | ch error warning success
 
-# Highlight with custom colors
-tail -f app.log | ch error::FF0000 warning::FFA500 info::00FF00
+# Highlight with custom colors (hex and named)
+tail -f app.log | ch error::red warning::orange info::00FF00
 
 # Monitor system logs
-journalctl -f | ch failed error success started
+journalctl -f | ch failed::red error::red success::green started::blue
 
 # Watch Docker logs
 docker logs -f container_name | ch error warning started stopped
@@ -126,14 +128,14 @@ cat script.sh | ch function if else error
 ### Combining features
 
 ```bash
-# Mix preset and custom colors
-tail -f app.log | ch error::FF0000 warning info debug success
+# Mix preset, named, and hex colors
+tail -f app.log | ch error::red warning::FF5500 info debug success::green
 
 # Case-insensitive by default (highlights: error, Error, ERROR, ErRoR, etc.)
 tail -f app.log | ch error
 
-# Monitor web server logs
-tail -f access.log | ch GET POST 404 500 200::00FF00
+# Monitor web server logs with named colors
+tail -f access.log | ch GET::blue POST::orange 404::red 500::red 200::green
 ```
 
 ## Build

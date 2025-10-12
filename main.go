@@ -13,15 +13,18 @@ const (
 	Reset = "\033[0m"
 )
 
-// Preset color palette (bright, readable colors)
-var presetColors = []string{
-	"\033[38;2;255;105;97m",  // Pastel Red
-	"\033[38;2;134;194;29m",  // Pastel Green
-	"\033[38;2;240;160;75m",  // Pastel Orange
-	"\033[38;2;134;176;189m", // Pastel Blue
-	"\033[38;2;255;164;164m", // Pastel Pink
-	"\033[38;2;203;166;247m", // Pastel Purple
+// Color definitions (name -> ANSI code)
+var namedColors = map[string]string{
+	"red":    "\033[38;2;255;105;97m",
+	"green":  "\033[38;2;134;194;29m",
+	"orange": "\033[38;2;240;160;75m",
+	"blue":   "\033[38;2;134;176;189m",
+	"pink":   "\033[38;2;255;164;164m",
+	"purple": "\033[38;2;203;166;247m",
 }
+
+// Order of colors for preset assignment
+var presetColorOrder = []string{"red", "green", "orange", "blue", "pink", "purple"}
 
 type wordConfig struct {
 	original string
@@ -29,9 +32,14 @@ type wordConfig struct {
 	color    string
 }
 
-func hexToANSI(hex string) string {
-	// Remove # if present
-	hex = strings.TrimPrefix(hex, "#")
+func parseColor(colorStr string) string {
+	// Check if it's a named color
+	if namedColor, ok := namedColors[strings.ToLower(colorStr)]; ok {
+		return namedColor
+	}
+
+	// Otherwise treat as hex color
+	hex := strings.TrimPrefix(colorStr, "#")
 
 	if len(hex) != 6 {
 		return ""
@@ -52,16 +60,18 @@ func parseArgs(args []string, caseSensitive bool) []wordConfig {
 
 		var color string
 		if len(parts) == 2 && parts[1] != "" {
-			// Custom color specified
-			color = hexToANSI(parts[1])
+			// Custom color specified (either named or hex)
+			color = parseColor(parts[1])
 			if color == "" {
 				fmt.Fprintf(os.Stderr, "Warning: invalid color '%s' for word '%s', using preset\n", parts[1], word)
-				color = presetColors[colorIndex%len(presetColors)]
+				colorName := presetColorOrder[colorIndex%len(presetColorOrder)]
+				color = namedColors[colorName]
 				colorIndex++
 			}
 		} else {
 			// Use preset color
-			color = presetColors[colorIndex%len(presetColors)]
+			colorName := presetColorOrder[colorIndex%len(presetColorOrder)]
+			color = namedColors[colorName]
 			colorIndex++
 		}
 
@@ -185,12 +195,15 @@ func main() {
 
 	args := flag.Args()
 	if len(args) == 0 {
-		fmt.Fprintf(os.Stderr, "Usage: ch [options] <word1> <word2>::<HEXCOLOR> ...\n")
+		fmt.Fprintf(os.Stderr, "Usage: ch [options] <word1> <word2>::<COLOR> ...\n")
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		fmt.Fprintf(os.Stderr, "  -s    case-sensitive matching (default: case-insensitive)\n")
 		fmt.Fprintf(os.Stderr, "  -w    extend match to whole word\n")
+		fmt.Fprintf(os.Stderr, "\nColors:\n")
+		fmt.Fprintf(os.Stderr, "  Named: red, green, orange, blue, pink, purple\n")
+		fmt.Fprintf(os.Stderr, "  Hex: any 6-digit hex color (e.g., FF5500)\n")
 		fmt.Fprintf(os.Stderr, "\nExample:\n")
-		fmt.Fprintf(os.Stderr, "  tail -f app.log | ch error warning::FF5500 success::00FF00\n")
+		fmt.Fprintf(os.Stderr, "  tail -f app.log | ch error::red warning::orange success::green\n")
 		os.Exit(1)
 	}
 
