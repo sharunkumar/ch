@@ -52,8 +52,26 @@ func parseColor(colorStr string) string {
 
 func parseArgs(args []string, caseSensitive bool) []wordConfig {
 	var configs []wordConfig
-	colorIndex := 0
+	usedColors := make(map[string]bool)
 
+	// First pass: reserve colors that are explicitly specified
+	for _, arg := range args {
+		parts := strings.Split(arg, "::")
+		if len(parts) == 2 && parts[1] != "" {
+			color := parseColor(parts[1])
+			if color != "" {
+				// Mark named color as used if it matches one of our presets
+				for name, ansiCode := range namedColors {
+					if color == ansiCode {
+						usedColors[name] = true
+						break
+					}
+				}
+			}
+		}
+	}
+
+	// Second pass: assign colors
 	for _, arg := range args {
 		parts := strings.Split(arg, "::")
 		word := parts[0]
@@ -64,15 +82,11 @@ func parseArgs(args []string, caseSensitive bool) []wordConfig {
 			color = parseColor(parts[1])
 			if color == "" {
 				fmt.Fprintf(os.Stderr, "Warning: invalid color '%s' for word '%s', using preset\n", parts[1], word)
-				colorName := presetColorOrder[colorIndex%len(presetColorOrder)]
-				color = namedColors[colorName]
-				colorIndex++
+				color = getNextAvailableColor(usedColors)
 			}
 		} else {
-			// Use preset color
-			colorName := presetColorOrder[colorIndex%len(presetColorOrder)]
-			color = namedColors[colorName]
-			colorIndex++
+			// Use next available preset color
+			color = getNextAvailableColor(usedColors)
 		}
 
 		search := word
@@ -88,6 +102,20 @@ func parseArgs(args []string, caseSensitive bool) []wordConfig {
 	}
 
 	return configs
+}
+
+func getNextAvailableColor(usedColors map[string]bool) string {
+	// Find first unused color from preset order
+	for _, colorName := range presetColorOrder {
+		if !usedColors[colorName] {
+			usedColors[colorName] = true
+			return namedColors[colorName]
+		}
+	}
+
+	// If all colors used, cycle back to the beginning
+	colorName := presetColorOrder[0]
+	return namedColors[colorName]
 }
 
 func highlightLine(line string, configs []wordConfig, caseSensitive, wholeWord bool) string {
