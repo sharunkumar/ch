@@ -48,6 +48,7 @@ Available named colors: `red`, `green`, `orange`, `blue`, `pink`, `purple`
 
 - `-s` - Case-sensitive matching (default is case-insensitive)
 - `-w` - Whole word extension - extends match until space or end of line
+- `-b` - Use background colors instead of foreground colors
 
 #### Case-sensitive matching
 
@@ -65,6 +66,18 @@ The `-w` flag extends the match to the entire word (until space or EOL):
 echo "Notice: backup 13344 - started with name backup_13344.zip" | ch -w back
 
 # Highlights: "backup" and "backup_13344.zip" (entire words)
+```
+
+#### Background colors
+
+The `-b` flag uses background colors instead of foreground colors:
+
+```bash
+# Highlight with background colors
+tail -f app.log | ch -b error warning success
+
+# Mix with custom colors
+tail -f app.log | ch -b error::red warning::orange info::blue
 ```
 
 ### Color palette

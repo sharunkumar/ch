@@ -28,7 +28,10 @@ var namedColors = []namedColor{
 	{"purple", 203, 166, 247},
 }
 
-func rgbToANSI(r, g, b int) string {
+func rgbToANSI(r, g, b int, background bool) string {
+	if background {
+		return fmt.Sprintf("\033[48;2;%d;%d;%dm", r, g, b)
+	}
 	return fmt.Sprintf("\033[38;2;%d;%d;%dm", r, g, b)
 }
 
@@ -36,14 +39,15 @@ type wordConfig struct {
 	original string
 	search   string // lowercase version for case-insensitive search
 	color    string
+	background bool
 }
 
-func parseColor(colorStr string) string {
+func parseColor(colorStr string, background bool) string {
 	// Check if it's a named color
 	lowerColor := strings.ToLower(colorStr)
 	for _, nc := range namedColors {
 		if nc.name == lowerColor {
-			return rgbToANSI(nc.r, nc.g, nc.b)
+			return rgbToANSI(nc.r, nc.g, nc.b, background)
 		}
 	}
 
@@ -56,10 +60,10 @@ func parseColor(colorStr string) string {
 
 	var r, g, b int
 	fmt.Sscanf(hex, "%02x%02x%02x", &r, &g, &b)
-	return rgbToANSI(r, g, b)
+	return rgbToANSI(r, g, b, background)
 }
 
-func parseArgs(args []string, caseSensitive bool) []wordConfig {
+func parseArgs(args []string, caseSensitive bool, background bool) []wordConfig {
 	var configs []wordConfig
 	usedColors := make(map[int]bool) // track indices in namedColors
 
@@ -67,11 +71,11 @@ func parseArgs(args []string, caseSensitive bool) []wordConfig {
 	for _, arg := range args {
 		parts := strings.Split(arg, "::")
 		if len(parts) == 2 && parts[1] != "" {
-			color := parseColor(parts[1])
+			color := parseColor(parts[1], background)
 			if color != "" {
 				// Mark named color as used if it matches one of our presets
 				for i, nc := range namedColors {
-					if color == rgbToANSI(nc.r, nc.g, nc.b) {
+					if color == rgbToANSI(nc.r, nc.g, nc.b, background) {
 						usedColors[i] = true
 						break
 					}
@@ -88,14 +92,14 @@ func parseArgs(args []string, caseSensitive bool) []wordConfig {
 		var color string
 		if len(parts) == 2 && parts[1] != "" {
 			// Custom color specified (either named or hex)
-			color = parseColor(parts[1])
+			color = parseColor(parts[1], background)
 			if color == "" {
 				fmt.Fprintf(os.Stderr, "Warning: invalid color '%s' for word '%s', using preset\n", parts[1], word)
-				color = getNextAvailableColor(usedColors)
+				color = getNextAvailableColor(usedColors, background)
 			}
 		} else {
 			// Use next available preset color
-			color = getNextAvailableColor(usedColors)
+			color = getNextAvailableColor(usedColors, background)
 		}
 
 		search := word
@@ -107,23 +111,24 @@ func parseArgs(args []string, caseSensitive bool) []wordConfig {
 			original: word,
 			search:   search,
 			color:    color,
+			background: background,
 		})
 	}
 
 	return configs
 }
 
-func getNextAvailableColor(usedColors map[int]bool) string {
+func getNextAvailableColor(usedColors map[int]bool, background bool) string {
 	// Find first unused color from namedColors slice
 	for i, nc := range namedColors {
 		if !usedColors[i] {
 			usedColors[i] = true
-			return rgbToANSI(nc.r, nc.g, nc.b)
+			return rgbToANSI(nc.r, nc.g, nc.b, background)
 		}
 	}
 
 	// If all colors used, cycle back to the beginning
-	return rgbToANSI(namedColors[0].r, namedColors[0].g, namedColors[0].b)
+	return rgbToANSI(namedColors[0].r, namedColors[0].g, namedColors[0].b, background)
 }
 
 func highlightLine(line string, configs []wordConfig, caseSensitive, wholeWord bool) string {
@@ -233,6 +238,7 @@ func highlightLine(line string, configs []wordConfig, caseSensitive, wholeWord b
 func main() {
 	caseSensitive := flag.Bool("s", false, "case-sensitive matching")
 	wholeWord := flag.Bool("w", false, "extend match to whole word (until space or EOL)")
+	background := flag.Bool("b", false, "use background colors instead of foreground")
 	flag.Parse()
 
 	args := flag.Args()
@@ -241,6 +247,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		fmt.Fprintf(os.Stderr, "  -s    case-sensitive matching (default: case-insensitive)\n")
 		fmt.Fprintf(os.Stderr, "  -w    extend match to whole word\n")
+		fmt.Fprintf(os.Stderr, "  -b    use background colors instead of foreground\n")
 		fmt.Fprintf(os.Stderr, "\nColors:\n")
 		fmt.Fprintf(os.Stderr, "  Named: red, green, orange, blue, pink, purple\n")
 		fmt.Fprintf(os.Stderr, "  Hex: any 6-digit hex color (e.g., FF5500)\n")
@@ -249,7 +256,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	configs := parseArgs(args, *caseSensitive)
+	configs := parseArgs(args, *caseSensitive, *background)
 
 	// Read from stdin line by line
 	scanner := bufio.NewScanner(os.Stdin)
