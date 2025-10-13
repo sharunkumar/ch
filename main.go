@@ -149,10 +149,16 @@ func highlightLine(line string, configs []wordConfig, caseSensitive, wholeWord b
 			}
 			idx += pos
 
+			startIdx := idx
 			endIdx := idx + len(cfg.search)
 
-			// If wholeWord mode, extend to next space or end of line
+			// If wholeWord mode, extend to word boundaries
 			if wholeWord {
+				// Extend backwards to start of word
+				for startIdx > 0 && line[startIdx-1] != ' ' && line[startIdx-1] != '\n' && line[startIdx-1] != '\t' {
+					startIdx--
+				}
+				// Extend forwards to end of word
 				for endIdx < len(line) && line[endIdx] != ' ' && line[endIdx] != '\n' && line[endIdx] != '\t' {
 					endIdx++
 				}
@@ -160,7 +166,7 @@ func highlightLine(line string, configs []wordConfig, caseSensitive, wholeWord b
 
 			// Check if this position is already colored (overlapping match)
 			alreadyColored := false
-			for i := idx; i < endIdx; i++ {
+			for i := startIdx; i < endIdx; i++ {
 				if colored[i] {
 					alreadyColored = true
 					break
@@ -169,15 +175,15 @@ func highlightLine(line string, configs []wordConfig, caseSensitive, wholeWord b
 
 			if !alreadyColored {
 				// Mark as colored
-				for i := idx; i < endIdx; i++ {
+				for i := startIdx; i < endIdx; i++ {
 					colored[i] = true
 				}
 
 				// Store replacement
-				matchedText := line[idx:endIdx]
+				matchedText := line[startIdx:endIdx]
 				coloredText := cfg.color + matchedText + Reset
 				replacements = append(replacements, replacement{
-					start: idx,
+					start: startIdx,
 					end:   endIdx,
 					text:  coloredText,
 				})
