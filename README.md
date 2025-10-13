@@ -166,16 +166,10 @@ cd ch
 go mod init ch
 
 # Build
-go build -buildvcs=false -o ch
+go build -o ch
 
 # (Optional) Install to your PATH
 sudo mv ch /usr/local/bin/
-```
-
-### Quick build without module
-
-```bash
-go build -buildvcs=false -o ch main.go
 ```
 
 ## Performance
