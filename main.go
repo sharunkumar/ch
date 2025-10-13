@@ -13,18 +13,24 @@ const (
 	Reset = "\033[0m"
 )
 
-// Color definitions (name -> ANSI code)
-var namedColors = map[string]string{
-	"red":    "\033[38;2;255;105;97m",
-	"green":  "\033[38;2;134;194;29m",
-	"orange": "\033[38;2;240;160;75m",
-	"blue":   "\033[38;2;134;176;189m",
-	"pink":   "\033[38;2;255;164;164m",
-	"purple": "\033[38;2;203;166;247m",
+type namedColor struct {
+	name string
+	r, g, b int
 }
 
-// Order of colors for preset assignment
-var presetColorOrder = []string{"red", "green", "orange", "blue", "pink", "purple"}
+// Preset colors in order of assignment
+var namedColors = []namedColor{
+	{"red", 255, 105, 97},
+	{"green", 134, 194, 29},
+	{"orange", 240, 160, 75},
+	{"blue", 134, 176, 189},
+	{"pink", 255, 164, 164},
+	{"purple", 203, 166, 247},
+}
+
+func rgbToANSI(r, g, b int) string {
+	return fmt.Sprintf("\033[38;2;%d;%d;%dm", r, g, b)
+}
 
 type wordConfig struct {
 	original string
@@ -34,8 +40,11 @@ type wordConfig struct {
 
 func parseColor(colorStr string) string {
 	// Check if it's a named color
-	if namedColor, ok := namedColors[strings.ToLower(colorStr)]; ok {
-		return namedColor
+	lowerColor := strings.ToLower(colorStr)
+	for _, nc := range namedColors {
+		if nc.name == lowerColor {
+			return rgbToANSI(nc.r, nc.g, nc.b)
+		}
 	}
 
 	// Otherwise treat as hex color
@@ -47,12 +56,12 @@ func parseColor(colorStr string) string {
 
 	var r, g, b int
 	fmt.Sscanf(hex, "%02x%02x%02x", &r, &g, &b)
-	return fmt.Sprintf("\033[38;2;%d;%d;%dm", r, g, b)
+	return rgbToANSI(r, g, b)
 }
 
 func parseArgs(args []string, caseSensitive bool) []wordConfig {
 	var configs []wordConfig
-	usedColors := make(map[string]bool)
+	usedColors := make(map[int]bool) // track indices in namedColors
 
 	// First pass: reserve colors that are explicitly specified
 	for _, arg := range args {
@@ -61,9 +70,9 @@ func parseArgs(args []string, caseSensitive bool) []wordConfig {
 			color := parseColor(parts[1])
 			if color != "" {
 				// Mark named color as used if it matches one of our presets
-				for name, ansiCode := range namedColors {
-					if color == ansiCode {
-						usedColors[name] = true
+				for i, nc := range namedColors {
+					if color == rgbToANSI(nc.r, nc.g, nc.b) {
+						usedColors[i] = true
 						break
 					}
 				}
@@ -104,18 +113,17 @@ func parseArgs(args []string, caseSensitive bool) []wordConfig {
 	return configs
 }
 
-func getNextAvailableColor(usedColors map[string]bool) string {
-	// Find first unused color from preset order
-	for _, colorName := range presetColorOrder {
-		if !usedColors[colorName] {
-			usedColors[colorName] = true
-			return namedColors[colorName]
+func getNextAvailableColor(usedColors map[int]bool) string {
+	// Find first unused color from namedColors slice
+	for i, nc := range namedColors {
+		if !usedColors[i] {
+			usedColors[i] = true
+			return rgbToANSI(nc.r, nc.g, nc.b)
 		}
 	}
 
 	// If all colors used, cycle back to the beginning
-	colorName := presetColorOrder[0]
-	return namedColors[colorName]
+	return rgbToANSI(namedColors[0].r, namedColors[0].g, namedColors[0].b)
 }
 
 func highlightLine(line string, configs []wordConfig, caseSensitive, wholeWord bool) string {
