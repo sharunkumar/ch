@@ -2,6 +2,8 @@
 
 A fast, simple terminal tool to highlight specific words in your command output with colors. Perfect for tailing logs, debugging, and making command output more readable.
 
+![](screenshot.png)
+
 ## Features
 
 - Automatic color assignment from a preset palette
